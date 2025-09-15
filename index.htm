@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>舒尔特注意力训练</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #2c3e50;
+            overflow: hidden;
+        }
+        
+        .screen {
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #3498db;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 28px;
+        }
+        
+        h2 {
+            text-align: center;
+            color: #3498db;
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 24px;
+        }
+        
+        .description {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #666;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        /* 难度选择界面 */
+        #difficulty-screen {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .difficulty-content {
+            width: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+        }
+        
+        #game-screen, #result-screen {
+            display: none;
+        }
+        
+        .difficulty-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        
+        .difficulty-option {
+            padding: 20px 10px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .difficulty-option:hover, .difficulty-option.selected {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #3498db;
+            background: #e3f2fd;
+        }
+        
+        .difficulty-option h3 {
+            color: #3498db;
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+        
+        .difficulty-option p {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        /* 游戏界面 */
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 16px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 12px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .info-label {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 16px;
+        }
+        
+        .grid-container {
+            width: 100%;
+            overflow: auto;
+            margin-bottom: 15px;
+            padding: 5px;
+            max-height: 50vh;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 8px;
+            margin: 0 auto;
+            padding: 10px;
+            background: #f0f4ff;
+            border-radius: 12px;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+            user-select: none;
+            aspect-ratio: 1/1; /* 保持正方形 */
+        }
+        
+        /* 根据难度调整单元格大小 */
+        .grid.size-3 .cell {
+            min-width: 80px;
+            min-height: 80px;
+            font-size: 32px;
+        }
+        
+        .grid.size-4 .cell {
+            min-width: 70px;
+            min-height: 70px;
+            font-size: 28px;
+        }
+        
+        .grid.size-5 .cell {
+            min-width: 60px;
+            min-height: 60px;
+            font-size: 24px;
+        }
+        
+        .grid.size-6 .cell {
+            min-width: 50px;
+            min-height: 50px;
+            font-size: 20px;
+        }
+        
+        .grid.size-7 .cell {
+            min-width: 45px;
+            min-height: 45px;
+            font-size: 18px;
+        }
+        
+        .grid.size-8 .cell {
+            min-width: 40px;
+            min-height: 40px;
+            font-size: 16px;
+        }
+        
+        .cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .cell.correct {
+            background: #e8f5e9;
+        }
+        
+        .cell.error {
+            background: #ffebee;
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% {transform: translateX(0);}
+            20%, 60% {transform: translateX(-3px);}
+            40%, 80% {transform: translateX(3px);}
+        }
+        
+        .game-controls {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        /* 结果界面 */
+        .result-card {
+            width: 100%;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .result-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d35400;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        /* 响应式设计 - 针对手机优化 */
+        @media (max-width: 500px) {
+            .screen {
+                padding: 20px 15px;
+                border-radius: 15px;
+                max-height: 85vh;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 20px;
+            }
+            
+            .difficulty-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .btn {
+                padding: 12px 15px;
+                font-size: 14px;
+            }
+            
+            .game-info {
+                padding: 10px;
+            }
+            
+            .info-label {
+                font-size: 12px;
+            }
+            
+            .info-value {
+                font-size: 14px;
+            }
+            
+            .grid {
+                gap: 6px;
+                padding: 8px;
+            }
+            
+            /* 响应式调整单元格大小 */
+            .grid.size-3 .cell {
+                min-width: 70px;
+                min-height: 70px;
+                font-size: 28px;
+            }
+            
+            .grid.size-4 .cell {
+                min-width: 60px;
+                min-height: 60px;
+                font-size: 24px;
+            }
+            
+            .grid.size-5 .cell {
+                min-width: 50px;
+                min-height: 50px;
+                font-size: 20px;
+            }
+            
+            .grid.size-6 .cell {
+                min-width: 45px;
+                min-height: 45px;
+                font-size: 18px;
+            }
+            
+            .grid.size-7 .cell {
+                min-width: 40px;
+                min-height: 40px;
+                font-size: 16px;
+            }
+            
+            .grid.size-8 .cell {
+                min-width: 35px;
+                min-height: 35px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .grid {
+                gap: 5px;
+                padding: 5px;
+            }
+            
+            .difficulty-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* 进一步调整小屏幕上的单元格大小 */
+            .grid.size-3 .cell {
+                min-width: 65px;
+                min-height: 65px;
+                font-size: 26px;
+            }
+            
+            .grid.size-4 .cell {
+                min-width: 55px;
+                min-height: 55px;
+                font-size: 22px;
+            }
+            
+            .grid.size-5 .cell {
+                min-width: 45px;
+                min-height: 45px;
+                font-size: 18px;
+            }
+            
+            .grid.size-6 .cell {
+                min-width: 40px;
+                min-height: 40px;
+                font-size: 16px;
+            }
+            
+            .grid.size-7 .cell {
+                min-width: 35px;
+                min-height: 35px;
+                font-size: 14px;
+            }
+            
+            .grid.size-8 .cell {
+                min-width: 32px;
+                min-height: 32px;
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 350px) {
+            .grid {
+                gap: 4px;
+            }
+            
+            /* 最小屏幕上的调整 */
+            .grid.size-3 .cell {
+                min-width: 60px;
+                min-height: 60px;
+                font-size: 24px;
+            }
+            
+            .grid.size-4 .cell {
+                min-width: 50px;
+                min-height: 50px;
+                font-size: 20px;
+            }
+            
+            .grid.size-5 .cell {
+                min-width: 42px;
+                min-height: 42px;
+                font-size: 17px;
+            }
+            
+            .grid.size-6 .cell {
+                min-width: 38px;
+                min-height: 38px;
+                font-size: 15px;
+            }
+            
+            .grid.size-7 .cell {
+                min-width: 34px;
+                min-height: 34px;
+                font-size: 13px;
+            }
+            
+            .grid.size-8 .cell {
+                min-width: 30px;
+                min-height: 30px;
+                font-size: 12px;
+            }
+        }
+        
+        /* 底部按钮固定 */
+        .screen-footer {
+            margin-top: auto;
+            padding-top: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- 难度选择界面 -->
+    <div class="screen" id="difficulty-screen">
+        <h1>舒尔特注意力训练</h1>
+        <p class="description">请选择游戏难度，按照数字从小到大的顺序依次点击方格</p>
+        
+        <div class="difficulty-content">
+            <div class="difficulty-grid">
+                <div class="difficulty-option selected" data-size="3">
+                    <h3>3×3</h3>
+                    <p>简单难度</p>
+                </div>
+                <div class="difficulty-option" data-size="4">
+                    <h3>4×4</h3>
+                    <p>初级难度</p>
+                </div>
+                <div class="difficulty-option" data-size="5">
+                    <h3>5×5</h3>
+                    <p>中级难度</p>
+                </div>
+                <div class="difficulty-option" data-size="6">
+                    <h3>6×6</h3>
+                    <p>高级难度</p>
+                </div>
+                <div class="difficulty-option" data-size="7">
+                    <h3>7×7</h3>
+                    <p>挑战难度</p>
+                </div>
+                <div class="difficulty-option" data-size="8">
+                    <h3>8×8</h3>
+                    <p>专家难度</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="screen-footer">
+            <button id="start-btn" class="btn btn-primary">开始游戏</button>
+        </div>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div class="screen" id="game-screen">
+        <h2>舒尔特训练</h2>
+        
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">目标数字</div>
+                <div id="current-target" class="info-value">1</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">用时</div>
+                <div id="timer" class="info-value">0.0s</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">错误</div>
+                <div id="error-count" class="info-value">0</div>
+            </div>
+        </div>
+        
+        <div class="grid-container">
+            <div class="grid" id="grid"></div>
+        </div>
+        
+        <div class="game-controls">
+            <button id="restart-btn" class="btn btn-warning">重新开始</button>
+            <button id="exit-btn" class="btn btn-danger">退出游戏</button>
+        </div>
+    </div>
+
+    <!-- 结果界面 -->
+    <div class="screen" id="result-screen">
+        <h1>游戏完成！</h1>
+        
+        <div class="result-card">
+            <div class="result-item">
+                <span class="result-label">难度级别</span>
+                <span id="result-difficulty" class="result-value">3×3</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">完成时间</span>
+                <span id="result-time" class="result-value">0.0s</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">错误次数</span>
+                <span id="result-errors" class="result-value highlight">0</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">平均每个数字</span>
+                <span id="result-average" class="result-value">0.0s</span>
+            </div>
+        </div>
+        
+        <div class="screen-footer">
+            <button id="back-btn" class="btn btn-primary">返回难度选择</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 游戏状态变量
+            let gridSize = 3;
+            let numbers = [];
+            let currentNumber = 1;
+            let startTime = null;
+            let timerInterval = null;
+            let isGameActive = false;
+            let errorCount = 0;
+            
+            // 界面元素
+            const difficultyScreen = document.getElementById('difficulty-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const resultScreen = document.getElementById('result-screen');
+            
+            // 游戏元素
+            const gridElement = document.getElementById('grid');
+            const currentTargetElement = document.getElementById('current-target');
+            const timerElement = document.getElementById('timer');
+            const errorCountElement = document.getElementById('error-count');
+            
+            // 结果元素
+            const resultDifficultyElement = document.getElementById('result-difficulty');
+            const resultTimeElement = document.getElementById('result-time');
+            const resultErrorsElement = document.getElementById('result-errors');
+            const resultAverageElement = document.getElementById('result-average');
+            
+            // 难度选择
+            const difficultyOptions = document.querySelectorAll('.difficulty-option');
+            difficultyOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    difficultyOptions.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    gridSize = parseInt(this.dataset.size);
+                });
+            });
+            
+            // 开始游戏按钮
+            document.getElementById('start-btn').addEventListener('click', function() {
+                difficultyScreen.style.display = 'none';
+                gameScreen.style.display = 'flex';
+                startGame();
+            });
+            
+            // 重新开始按钮
+            document.getElementById('restart-btn').addEventListener('click', function() {
+                if (isGameActive) {
+                    resetGame();
+                    startGame();
+                }
+            });
+            
+            // 退出游戏按钮
+            document.getElementById('exit-btn').addEventListener('click', function() {
+                resetGame();
+                gameScreen.style.display = 'none';
+                difficultyScreen.style.display = 'flex';
+            });
+            
+            // 返回难度选择按钮
+            document.getElementById('back-btn').addEventListener('click', function() {
+                resultScreen.style.display = 'none';
+                difficultyScreen.style.display = 'flex';
+            });
+            
+            // 初始化游戏
+            function initializeGame() {
+                // 生成数字数组
+                numbers = Array.from({length: gridSize * gridSize}, (_, i) => i + 1);
+                
+                // 随机打乱数字
+                shuffleArray(numbers);
+                
+                // 创建网格
+                createGrid();
+                
+                // 重置游戏状态
+                currentNumber = 1;
+                currentTargetElement.textContent = currentNumber;
+                timerElement.textContent = '0.0s';
+                errorCount = 0;
+                errorCountElement.textContent = '0';
+            }
+            
+            // 开始游戏
+            function startGame() {
+                initializeGame();
+                isGameActive = true;
+            }
+            
+            // 创建网格
+            function createGrid() {
+                gridElement.innerHTML = '';
+                gridElement.className = 'grid'; // 重置类名
+                
+                // 根据网格大小添加特定类名
+                gridElement.classList.add(`size-${gridSize}`);
+                
+                gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+                
+                numbers.forEach(number => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = number;
+                    cell.dataset.number = number;
+                    
+                    cell.addEventListener('click', handleCellClick);
+                    
+                    gridElement.appendChild(cell);
+                });
+            }
+            
+            // 处理单元格点击
+            function handleCellClick(event) {
+                if (!isGameActive) return;
+                
+                const clickedNumber = parseInt(event.target.dataset.number);
+                
+                // 如果是第一次点击，开始计时
+                if (currentNumber === 1 && clickedNumber === 1) {
+                    startTimer();
+                }
+                
+                // 检查点击是否正确
+                if (clickedNumber === currentNumber) {
+                    // 正确点击
+                    event.target.classList.add('correct');
+                    event.target.style.cursor = 'default';
+                    event.target.removeEventListener('click', handleCellClick);
+                    
+                    currentNumber++;
+                    currentTargetElement.textContent = currentNumber;
+                    
+                    // 检查游戏是否完成
+                    if (currentNumber > gridSize * gridSize) {
+                        endGame();
+                    }
+                } else {
+                    // 错误点击
+                    errorCount++;
+                    errorCountElement.textContent = errorCount;
+                    event.target.classList.add('error');
+                    
+                    // 移除错误动画类
+                    setTimeout(() => {
+                        event.target.classList.remove('error');
+                    }, 500);
+                }
+            }
+            
+            // 开始计时器
+            function startTimer() {
+                startTime = Date.now();
+                clearInterval(timerInterval);
+                
+                timerInterval = setInterval(() => {
+                    const elapsedTime = (Date.now() - startTime) / 1000;
+                    timerElement.textContent = `${elapsedTime.toFixed(1)}s`;
+                }, 100);
+            }
+            
+            // 结束游戏
+            function endGame() {
+                isGameActive = false;
+                clearInterval(timerInterval);
+                
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                const averageTime = elapsedTime / (gridSize * gridSize);
+                
+                // 显示结果
+                resultDifficultyElement.textContent = `${gridSize}×${gridSize}`;
+                resultTimeElement.textContent = `${elapsedTime.toFixed(1)}s`;
+                resultErrorsElement.textContent = errorCount;
+                resultAverageElement.textContent = `${averageTime.toFixed(2)}s`;
+                
+                // 切换到结果界面
+                gameScreen.style.display = 'none';
+                resultScreen.style.display = 'flex';
+            }
+            
+            // 重置游戏
+            function resetGame() {
+                isGameActive = false;
+                clearInterval(timerInterval);
+            }
+            
+            // 辅助函数：随机打乱数组
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+        });
+    </script>
+</body>
+</html>
